@@ -69,6 +69,7 @@ public:
     void reverse();
     void sum();
     void constSource();
+    void join();
 
     void containers();
 
@@ -102,6 +103,7 @@ void TestLinq::runMain()
     reverse();
     sum();
     constSource();
+    join();
 
     containers();
 }
@@ -445,6 +447,27 @@ void TestLinq::sum()
         throw new InvalidResult();
 }
 
+void TestLinq::join()
+{
+    auto data1 = testData1();
+    auto data2 = testData2();
+    auto src1 = Linq::from(data1);
+    auto src2 = Linq::from(data2);
+
+    auto result = src1
+        .join(
+            src2,
+            [](decltype(src1.const_reference()) a){ return a.iVal; },
+            [](decltype(src2.const_reference()) b){ return b.iVal2; },
+            []
+            (decltype(src1.const_reference()) a, decltype(src2.const_reference()) b)
+            { 
+                return std::make_pair(b.dVal, a.sVal); 
+            }
+        )
+        .toVector();
+}
+
 void TestLinq::constSource()
 {
     std::vector<double> vec1;
@@ -481,7 +504,7 @@ const std::vector<TestClass1> TestLinq::testData1()
         tmp.dVal = i * 10;
         std::stringstream s;
         s << "str " << i / 3;
-        tmp.sVal = s.str();;
+        tmp.sVal = s.str();
         result.push_back(tmp);
     }
     return result;
@@ -493,11 +516,13 @@ const std::vector<TestClass2> TestLinq::testData2()
     for (int i = 0; i < 10; i++)
     {
         TestClass2 tmp;
+        tmp.iVal = i * 2;
+        tmp.dVal = i * 20;
         tmp.iVal2 = i * 2;
         tmp.dVal2 = i * 20;
         std::stringstream s;
         s << "str " << i * 2;
-        tmp.sVal2 = s.str();;
+        tmp.sVal2 = s.str();
         result.push_back(tmp);
     }
     return result;
