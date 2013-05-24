@@ -18,6 +18,9 @@ namespace Linq{
     class LinqOrd;
 
     template<typename T>
+    T MakeType();
+
+    template<typename T>
     class Range
     {
     public:
@@ -46,8 +49,10 @@ namespace Linq{
         T& reference();
         const T& const_reference();
 
-        typename typedef std::remove_const<typename T>::type CleanT;
+        typedef typename std::remove_const<T>::type CleanT;
         //-------------------------------------------------------------------------
+        Linq<CleanT> removeConst();
+
         template<typename F>
         T aggregate(F f);
         template<typename TAccumulate, typename F>
@@ -62,7 +67,7 @@ namespace Linq{
         bool any(F f);
         bool any();
 
-        Linq<typename T> concat(const Linq<typename T> &second);
+        Linq<T> concat(const Linq<T> &second);
 
         template<typename F>
         bool contains(T val, F f);
@@ -72,48 +77,48 @@ namespace Linq{
         size_t count(F f);
         size_t count();
 
-        Linq<typename T> defaultIfEmpty();
-        Linq<typename T> defaultIfEmpty(const T &defaultValue);
+        Linq<T> defaultIfEmpty();
+        Linq<T> defaultIfEmpty(const T &defaultValue);
 
         template<typename F>
-        Linq<typename T> distinct(F f);
-        Linq<typename T> distinct();
+        Linq<T> distinct(F f);
+        Linq<T> distinct();
 
         T elementAt(unsigned int index);
         T elementAtOrDefault(unsigned int index);
         T elementAtOrDefault(unsigned int index, const T &defaultValue);
 
-        template <typename TComp>
-        Linq<typename T> except(Linq<typename T> other, TComp comp);
-        Linq<typename T> except(Linq<typename T> other);
+        template <typename U, typename TComp>
+        Linq<T> except(Linq<U> other, TComp comp);
+        Linq<T> except(Linq<T> other);
 
         template <typename U>
-        Linq<typename T> where(U f);
+        Linq<T> where(U f);
 
-        LinqOrd<typename T> orderBy();
+        LinqOrd<T> orderBy();
         template <typename U>
-        LinqOrd<typename T> orderBy(U f);
+        LinqOrd<T> orderBy(U f);
         template <typename U, typename Comp>
-        LinqOrd<typename T> orderBy(U f, Comp comp);
+        LinqOrd<T> orderBy(U f, Comp comp);
 
-        LinqOrd<typename T> orderByDesc();
+        LinqOrd<T> orderByDesc();
         template <typename U>
-        LinqOrd<typename T> orderByDesc(U f);
+        LinqOrd<T> orderByDesc(U f);
         template <typename U, typename Comp>
-        LinqOrd<typename T> orderByDesc(U f, Comp comp);
+        LinqOrd<T> orderByDesc(U f, Comp comp);
 
         template <typename U>
         auto select(U f) -> Linq<decltype(f(MakeType<T>()))>;
 
-        Linq<typename T> skip(int n);
+        Linq<T> skip(int n);
 
         template <typename F>
-        Linq<typename T> skipWhile(F f);
+        Linq<T> skipWhile(F f);
 
-        Linq<typename T> take(unsigned int n);
+        Linq<T> take(unsigned int n);
 
         template <typename F>
-        Linq<typename T> takeWhile(F f);
+        Linq<T> takeWhile(F f);
 
         template<typename U, typename FLeftKey, typename FRightKey, typename FResult>
         auto join(
@@ -165,8 +170,8 @@ namespace Linq{
         template<typename F, typename G>
         auto groupBy(F f, G g) -> Linq<
             std::pair<
-            typename std::remove_const<decltype(f(MakeType<T>()))>::type,
-            std::vector<typename std::remove_const<decltype(g(MakeType<T>()))>::type>
+               typename std::remove_const<decltype(f(MakeType<T>()))>::type,
+               std::vector<typename std::remove_const<decltype(g(MakeType<T>()))>::type>
             >
         >;
 
@@ -178,7 +183,7 @@ namespace Linq{
             >
         >;
 
-        Linq<typename T> reverse();
+        Linq<T> reverse();
 
         T first();
         T firstOrDefault();
@@ -192,29 +197,39 @@ namespace Linq{
         T lastOrDefault();
         T lastOrDefault(const T &defaultValue);
 
+        bool empty();
+
         template<typename F>
         T elect(F f);
 
         T min();
 
         T max();
+        
+        std::pair<T, T> minMax();
 
         T sum();
 
         template<typename F>
         auto sum(F f) -> decltype(f(MakeType<T>()));
 
-        std::vector<typename T> toVector();
+        T avg();
 
-        std::set<typename T> toSet();
+        template<typename F>
+        auto avg(F f) -> decltype(f(MakeType<T>()));
 
-        std::list<typename T> toList();
+
+        std::vector<T> toVector();
+
+        std::set<T> toSet();
+
+        std::list<T> toList();
 
         template<typename FKey, typename FValue>
         auto toMap(FKey key, FValue value) -> std::map<decltype(key(MakeType<T>())), decltype(value(MakeType<T>()))>;
 
 #ifdef QVECTOR_H
-        QVector<typename T> toQVector();
+        QVector<T> toQVector();
 #endif
 
     public:
@@ -222,7 +237,7 @@ namespace Linq{
     };
     //=============================================================================
     template<typename T>
-    class LinqOrd: public Linq<typename T>
+    class LinqOrd: public Linq<T>
     {
     public:
         LinqOrd();
@@ -232,13 +247,13 @@ namespace Linq{
         LinqOrd& operator=(LinqOrd &&rh);
 
         template <typename U>
-        LinqOrd<typename T> thenBy(U f);
+        LinqOrd<T> thenBy(U f);
         template <typename U, typename Comp>
-        LinqOrd<typename T> thenBy(U f, Comp comp);
+        LinqOrd<T> thenBy(U f, Comp comp);
         template <typename U>
-        LinqOrd<typename T> thenByDesc(U f);
+        LinqOrd<T> thenByDesc(U f);
         template <typename U, typename Comp>
-        LinqOrd<typename T> thenByDesc(U f, Comp comp);
+        LinqOrd<T> thenByDesc(U f, Comp comp);
     };
     //=============================================================================
 
@@ -288,7 +303,7 @@ namespace Linq{
                 iter_ = b_;
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new IteratorRange(b_, e_);
                 return result;
@@ -300,7 +315,7 @@ namespace Linq{
         };
 
         template<typename T>
-        class ArrayRange : public Range<typename T>
+        class ArrayRange : public Range<T>
         {
         public:
             typedef T* TIter;
@@ -335,7 +350,7 @@ namespace Linq{
                 iter_ = b_;
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new ArrayRange(b_, e_);
                 return result;
@@ -347,10 +362,10 @@ namespace Linq{
         };
 
         template<typename TCont, typename TIter, typename TValue>
-        class ContainerRange : public Range<typename TValue>
+        class ContainerRange : public Range<TValue>
         {
         public:
-            typedef typename TValue T;
+            typedef TValue T;
 
             ContainerRange(TCont &cont)
                 : cont_(cont)
@@ -384,7 +399,7 @@ namespace Linq{
                 e_ = std::end(cont_);
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new ContainerRange(cont_);
                 return result;
@@ -431,7 +446,7 @@ namespace Linq{
                 index_ = 0;
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new RepeatRange(value_, count_);
                 return result;
@@ -443,7 +458,7 @@ namespace Linq{
         };
 
         template<typename T>
-        class EmptyRange : public Range<typename T>
+        class EmptyRange : public Range<T>
         {
         public:
             EmptyRange()
@@ -469,18 +484,18 @@ namespace Linq{
             {
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new EmptyRange<T>();
                 return result;
             }
         };
 
-        template<typename T, typename TComp>
-        class ExceptRange : public Range<typename T>
+        template<typename T, typename U, typename TComp>
+        class ExceptRange : public Range<T>
         {
         public:
-            ExceptRange(Range<T> *first, Range<T> *second, TComp comp)
+            ExceptRange(Range<T> *first, Range<U> *second, TComp comp)
                 : first_(first)
                 , second_(second)
                 , comp_(comp)
@@ -522,14 +537,14 @@ namespace Linq{
                 first_->rewind();
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
-                auto result = new ExceptRange<T, TComp>(CloneRange(first_), CloneRange(second_), comp_);
+                auto result = new ExceptRange<T, U, TComp>(CloneRange(first_), CloneRange(second_), comp_);
                 return result;
             }
         private:
             Range<T> *first_;
-            Range<T> *second_;
+            Range<U> *second_;
             TComp comp_;
             bool frontReady;
 
@@ -610,7 +625,7 @@ namespace Linq{
                 firstPart_ = true;
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new ConcatRange<T>(CloneRange(first_), CloneRange(second_));
                 return result;
@@ -678,7 +693,7 @@ namespace Linq{
                 isPrepared_ = false;
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new DefaultIfEmptyRange<T>(CloneRange(src_), defaultValue_);
                 return result;
@@ -743,7 +758,7 @@ namespace Linq{
                 src_->rewind();
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new WhereRange(CloneRange(src_), f_);
                 return result;
@@ -816,7 +831,7 @@ namespace Linq{
                 , isDesc_(isDesc)
                 , prepared_(false)
             {
-                addComparator(f, comp, isDesc);
+                this->addComparator(f, comp, isDesc);
             }
 
             ~OrderByRange()
@@ -856,10 +871,10 @@ namespace Linq{
                 orderedData_.clear();
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
-                auto result = dynamic_cast<OrderByRange*>(new OrderByRange(CloneRange(src_), f_, comp_, isDesc_));
-                result->comparators = comparators;
+                auto result = new OrderByRange(CloneRange(src_), f_, comp_, isDesc_);
+                result->comparators = this->comparators;
                 return result;
             }
         private:
@@ -877,25 +892,29 @@ namespace Linq{
                 while(!src_->empty())
                     orderedData_.push_back(&src_->popFront());
 
-                std::function<bool(const T *lh, const T *rh)> aggComp;
-                if (comparators.size() == 1)
+                if (this->comparators.size() == 1)
                 {
-                    aggComp =
-                        [=]
-                    (const T *lh, const T *rh) -> bool
-                    {
-                        return (!isDesc_) ?
-                            comp_(f_(*lh), f_(*rh)) :
-                            comp_(f_(*rh), f_(*lh)) ;
-                    };
+                    
+		    if (!isDesc_)
+                        std::sort(
+                        orderedData_.begin(),
+                        orderedData_.end(),
+                        [=](const T *lh, const T *rh) -> bool{ return comp_(f_(*lh), f_(*rh)) ;}
+                        );
+                    else
+                        std::sort(
+                        orderedData_.begin(),
+                        orderedData_.end(),
+                        [=](const T *lh, const T *rh) -> bool{ return comp_(f_(*rh), f_(*lh)) ;}
+                        );
                 }
                 else
                 {
-                    aggComp =
+                    auto aggComp =
                         [&]
                     (const T *lh, const T *rh) -> bool
                     {
-                        for (auto ii = comparators.begin(); ii != comparators.end(); ++ii)
+                        for (auto ii = this->comparators.begin(); ii != this->comparators.end(); ++ii)
                         {
                             int c = (*ii)(lh, rh);
                             if (c != 0)
@@ -903,13 +922,13 @@ namespace Linq{
                         }
                         return false;
                     };
+                    std::sort(
+                       orderedData_.begin(),
+                       orderedData_.end(),
+                       aggComp
+                    );
                 }
 
-                std::sort(
-                    orderedData_.begin(),
-                    orderedData_.end(),
-                    aggComp
-                    );
 
                 iter_ = orderedData_.begin();
                 end_ = orderedData_.end();
@@ -960,7 +979,7 @@ namespace Linq{
                 iter_ = data_.begin();
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new SelectRange<T, U, F>(CloneRange(src_), f_);
                 return result;
@@ -1027,15 +1046,15 @@ namespace Linq{
                 prepared_ = false;
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new SkipRange<T>(CloneRange(src_), n_);
                 return result;
             }
         private:
             Range<T> *src_;
-            bool prepared_;
             unsigned int n_;
+            bool prepared_;
 
             void prepare()
             {
@@ -1090,15 +1109,15 @@ namespace Linq{
                 prepared_ = false;
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new SkipWhileRange<T, F>(CloneRange(src_), f_);
                 return result;
             }
         private:
             Range<T> *src_;
-            bool prepared_;
             F f_;
+            bool prepared_;
 
             void prepare()
             {
@@ -1117,8 +1136,8 @@ namespace Linq{
         public:
             TakeRange(Range<T> *src, unsigned int n)
                 : src_(src)
-                , n_(n)
                 , taken_(0)
+                , n_(n)
             {
             }
 
@@ -1155,7 +1174,7 @@ namespace Linq{
                 src_->rewind();
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new TakeRange<T>(CloneRange(src_), n_);
                 return result;
@@ -1203,7 +1222,7 @@ namespace Linq{
                 src_->rewind();
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new TakeWhileRange<T, F>(CloneRange(src_), f_);
                 return result;
@@ -1274,7 +1293,7 @@ namespace Linq{
         {
         public:
             JoinRange(Range<LT> *srcL, Range<RT> *srcR, FLeftKey leftKey, FRightKey rightKey, FResult selectResult, FKeyComp keyComp)
-                : BaseInnerJoinRange(srcL, srcR)
+                : BaseInnerJoinRange<LT, RT, TResult>(srcL, srcR)
                 , leftKey_(leftKey)
                 , rightKey_(rightKey)
                 , selectResult_(selectResult)
@@ -1282,11 +1301,11 @@ namespace Linq{
             {
             }
 
-            Range* clone() override
+            Range<TResult>* clone() override
             {
                 auto result = new JoinRange<LT, RT, FLeftKey, FRightKey, FResult, TResult, FKeyComp>(
-                    CloneRange(srcL_),
-                    CloneRange(srcR_),
+                    CloneRange(this->srcL_),
+                    CloneRange(this->srcR_),
                     leftKey_,
                     rightKey_,
                     selectResult_,
@@ -1297,24 +1316,24 @@ namespace Linq{
         protected:
             void prepare()
             {
-                prepared_ = true;
-                if (srcL_->empty() || srcR_->empty())
+                this->prepared_ = true;
+                if (this->srcL_->empty() || this->srcR_->empty())
                     return;
 
                 //подготавливаем список ключ-значение из правого списка
                 typedef std::pair<decltype(rightKey_(MakeType<RT>())), RT*> KeyValue;
                 std::vector<KeyValue> rhData;
-                while(!srcR_->empty())
+                while(!this->srcR_->empty())
                 {
-                    auto pVal = &srcR_->popFront();
+                    auto pVal = &this->srcR_->popFront();
                     rhData.push_back(KeyValue(rightKey_(*pVal), pVal));
                 }
 
                 //двигаемся по левому списку
-                while(!srcL_->empty())
+                while(!this->srcL_->empty())
                 {
                     //вычилсяем значение
-                    LT *lh = &srcL_->popFront();
+                    LT *lh = &this->srcL_->popFront();
                     //и ключ
                     auto lhKey = leftKey_(*lh);
 
@@ -1323,10 +1342,10 @@ namespace Linq{
                     {
                         //сравниваем ключи на эквивалентность
                         if (keyComp_(lhKey, ii->first))
-                            data_.push_back(selectResult_(*lh, *(ii->second)));
+                            this->data_.push_back(selectResult_(*lh, *(ii->second)));
                     }
                 }
-                iter_ = data_.begin();
+                this->iter_ = this->data_.begin();
             }
         private:
             FLeftKey leftKey_;
@@ -1340,7 +1359,7 @@ namespace Linq{
         {
         public:
             LeftJoinRange(Range<LT> *srcL, Range<RT> *srcR, FLeftKey leftKey, FRightKey rightKey, FResult selectResult, FKeyComp keyComp, RT defaultValue)
-                : BaseInnerJoinRange(srcL, srcR)
+                : BaseInnerJoinRange<LT, RT, TResult>(srcL, srcR)
                 , leftKey_(leftKey)
                 , rightKey_(rightKey)
                 , selectResult_(selectResult)
@@ -1349,11 +1368,11 @@ namespace Linq{
             {
             }
 
-            Range* clone() override
+            Range<TResult>* clone() override
             {
                 auto result = new LeftJoinRange<LT, RT, FLeftKey, FRightKey, FResult, TResult, FKeyComp>(
-                    CloneRange(srcL_),
-                    CloneRange(srcR_),
+                    CloneRange(this->srcL_),
+                    CloneRange(this->srcR_),
                     leftKey_,
                     rightKey_,
                     selectResult_,
@@ -1365,24 +1384,24 @@ namespace Linq{
         protected:
             void prepare()
             {
-                prepared_ = true;
-                if (srcL_->empty())
+                this->prepared_ = true;
+                if (this->srcL_->empty())
                     return;
 
                 //подготавливаем список ключ-значение из правого списка
                 typedef std::pair<decltype(rightKey_(MakeType<RT>())), RT*> KeyValue;
                 std::vector<KeyValue> rhData;
-                while(!srcR_->empty())
+                while(!this->srcR_->empty())
                 {
-                    auto pVal = &srcR_->popFront();
+                    auto pVal = &this->srcR_->popFront();
                     rhData.push_back(KeyValue(rightKey_(*pVal), pVal));
                 }
 
                 //двигаемся по левому списку
-                while(!srcL_->empty())
+                while(!this->srcL_->empty())
                 {
                     //вычилсяем значение
-                    LT *lh = &srcL_->popFront();
+                    LT *lh = &this->srcL_->popFront();
                     //и ключ
                     auto lhKey = leftKey_(*lh);
 
@@ -1393,15 +1412,15 @@ namespace Linq{
                         //сравниваем ключи на эквивалентность
                         if (keyComp_(lhKey, ii->first))
                         {
-                            data_.push_back(selectResult_(*lh, *(ii->second)));
+                            this->data_.push_back(selectResult_(*lh, *(ii->second)));
                             isFound = true;
                         }
                     }
 
                     if (!isFound)
-                        data_.push_back(selectResult_(*lh, defaultValue_));
+                        this->data_.push_back(selectResult_(*lh, defaultValue_));
                 }
-                iter_ = data_.begin();
+                this->iter_ = this->data_.begin();
             }
         private:
             FLeftKey leftKey_;
@@ -1416,7 +1435,7 @@ namespace Linq{
         {
         public:
             FullJoinRange(Range<LT> *srcL, Range<RT> *srcR, FLeftKey leftKey, FRightKey rightKey, FResult selectResult, FKeyComp keyComp, LT defaultLValue, RT defaultRValue)
-                : BaseInnerJoinRange(srcL, srcR)
+                : BaseInnerJoinRange<LT, RT, TResult>(srcL, srcR)
                 , leftKey_(leftKey)
                 , rightKey_(rightKey)
                 , selectResult_(selectResult)
@@ -1426,11 +1445,11 @@ namespace Linq{
             {
             }
 
-            Range* clone() override
+            Range<TResult>* clone() override
             {
                 auto result = new FullJoinRange<LT, RT, FLeftKey, FRightKey, FResult, TResult, FKeyComp>(
-                    CloneRange(srcL_),
-                    CloneRange(srcR_),
+                    CloneRange(this->srcL_),
+                    CloneRange(this->srcR_),
                     leftKey_,
                     rightKey_,
                     selectResult_,
@@ -1443,24 +1462,24 @@ namespace Linq{
         protected:
             void prepare()
             {
-                prepared_ = true;
+                this->prepared_ = true;
 
                 //подготавливаем список ключ-значение из правого списка
                 typedef decltype(rightKey_(MakeType<RT>())) TRKey;
                 typedef std::pair<TRKey, RT*> RKeyValue;
                 std::vector<RKeyValue> rhData;
-                while(!srcR_->empty())
+                while(!this->srcR_->empty())
                 {
-                    auto pVal = &srcR_->popFront();
+                    auto pVal = &this->srcR_->popFront();
                     rhData.push_back(RKeyValue(rightKey_(*pVal), pVal));
                 }
 
                 std::set<TRKey> usedRKeys;
                 //двигаемся по левому списку
-                while(!srcL_->empty())
+                while(!this->srcL_->empty())
                 {
                     //вычилсяем значение
-                    LT *lh = &srcL_->popFront();
+                    LT *lh = &this->srcL_->popFront();
                     //и ключ
                     auto lhKey = leftKey_(*lh);
 
@@ -1471,14 +1490,14 @@ namespace Linq{
                         //сравниваем ключи на эквивалентность
                         if (keyComp_(lhKey, ii->first))
                         {
-                            data_.push_back(selectResult_(*lh, *(ii->second)));
+                            this->data_->push_back(selectResult_(*lh, *(ii->second)));
                             isFound = true;
                             usedRKeys.insert(ii->first);
                         }
                     }
 
                     if (!isFound)
-                        data_.push_back(selectResult_(*lh, defaultRValue_));
+                        this->data_->push_back(selectResult_(*lh, defaultRValue_));
                 }
 
                 auto endIter = usedRKeys.end();
@@ -1486,10 +1505,10 @@ namespace Linq{
                 {
                     if (usedRKeys.find(ii->first) == endIter)
                         //если не нашли ключ среди использованных, то добавляем правый объект
-                            data_.push_back(selectResult_(defaultLValue_, *(ii->second)));
+                        this->data_->push_back(selectResult_(defaultLValue_, *(ii->second)));
                 }
 
-                iter_ = data_.begin();
+                this->iter_ = this->data_->begin();
             }
         private:
             FLeftKey leftKey_;
@@ -1548,7 +1567,7 @@ namespace Linq{
                 data_.clear();
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new SelectManyRange<T, U, F>(
                     CloneRange(src_),
@@ -1623,7 +1642,7 @@ namespace Linq{
                 prepared_ = false;
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new SelectManyRange2<T, U, F>(
                     CloneRange(src_),
@@ -1635,13 +1654,13 @@ namespace Linq{
             Range<U> *src_;
             bool prepared_;
             F f_;
-            std::list<Linq<typename T>> innerRanges_;
-            Linq<typename T> *currentInner_;
+            std::list<Linq<T>> innerRanges_;
+            Linq<T> *currentInner_;
 
             void prepare()
             {
                 prepared_ = true;
-                innerRanges_.push_back(Linq<typename T>());
+                innerRanges_.push_back(Linq<T>());
                 currentInner_ = &(innerRanges_.front());
                 while(!src_->empty())
                 {
@@ -1666,7 +1685,7 @@ namespace Linq{
 
             void findNext()
             {
-                Linq<typename T> *nextInner = nullptr;
+                Linq<T> *nextInner = nullptr;
                 while(!src_->empty())
                 {
                     if (advanceInner())
@@ -1677,7 +1696,7 @@ namespace Linq{
                     //получаем следующее внутреннее множество
                     if (nextInner == nullptr)
                     {
-                        innerRanges_.push_back(Linq<typename T>());
+                        innerRanges_.push_back(Linq<T>());
                         nextInner = &(innerRanges_.back());
                     }
                     *nextInner = f_(src_->front());
@@ -1732,7 +1751,7 @@ namespace Linq{
                 prepared_ = false;
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new DistinctRange<T, F, TKey>(
                     CloneRange(src_),
@@ -1744,9 +1763,9 @@ namespace Linq{
             Range<T> *src_;
             bool prepared_;
             F f_;
-            std::map<typename TKey, typename T*> data_;
-            typename std::map<typename TKey, typename T*>::iterator iter_;
-            typename std::map<typename TKey, typename T*>::iterator end_;
+            std::map<TKey, T*> data_;
+            typename std::map<TKey, T*>::iterator iter_;
+            typename std::map<TKey, T*>::iterator end_;
 
             void prepare()
             {
@@ -1756,7 +1775,7 @@ namespace Linq{
                     T &val = src_->popFront();
                     TKey key = f_(val);
                     if (data_.find(key) == data_.end())
-                        data_.insert(std::pair<typename TKey, typename T*>(key, &val));
+                        data_.insert(std::pair<TKey, T*>(key, &val));
                 }
                 iter_ = data_.begin();
                 end_ = data_.end();
@@ -1803,7 +1822,7 @@ namespace Linq{
                 prepared_ = false;
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new GroupByRange<T, TSrc, F, G, TKey, TValue>(
                     CloneRange(src_),
@@ -1813,7 +1832,7 @@ namespace Linq{
                 return result;
             }
         private:
-            Range<typename TSrc> *src_;
+            Range<TSrc> *src_;
             bool prepared_;
             F f_;
             G g_;
@@ -1825,8 +1844,8 @@ namespace Linq{
             void prepare()
             {
                 prepared_ = true;
-                typedef std::vector<typename TValue> TValues;
-                typename std::map<typename TKey, typename TValues> tmp;
+                typedef std::vector<TValue> TValues;
+                typename std::map<TKey, TValues> tmp;
 
                 while(!src_->empty())
                 {
@@ -1893,7 +1912,7 @@ namespace Linq{
                 orderedData_.clear();
             }
 
-            Range* clone() override
+            Range<T>* clone() override
             {
                 auto result = new ReverseRange<T>(CloneRange(src_));
                 return result;
@@ -1922,10 +1941,52 @@ namespace Linq{
                 end_ = orderedData_.rend();
             }
         };
+
+        template<typename T, typename SrcT>
+        class RemoveConstRange : public Range<T>
+        {
+        public:
+            RemoveConstRange(Range<SrcT> *src)
+                : src_(src)
+            {
+            }
+
+            ~RemoveConstRange()
+            {
+                delete src_;
+            }
+
+            bool empty() override
+            {
+                return src_->empty();
+            }
+
+            T& popFront() override
+            {
+                return (T&)src_->popFront();
+            }
+
+            T& front() override
+            {
+                return (T&)src_->front();
+            }
+
+            void rewind() override
+            {
+                src_->rewind();
+            }
+
+            Range<T>* clone() override
+            {
+                auto result = new RemoveConstRange<T, SrcT>(CloneRange(src_));
+                return result;
+            }
+        private:
+            Range<SrcT> *src_;
+        };
     }//Implemenatation
     //=============================================================================
-    template<typename T>
-    T MakeType();
+
 
     template<typename T>
     Linq<T>::Linq()
@@ -1947,7 +2008,7 @@ namespace Linq{
     }
 
     template<typename T>
-    typename Linq<T>& Linq<T>::operator=(const Linq &rh)
+    Linq<T>& Linq<T>::operator=(const Linq &rh)
     {
         if (this == &rh)
             return *this;
@@ -1957,7 +2018,7 @@ namespace Linq{
     }
 
     template<typename T>
-    typename Linq<T>& Linq<T>::operator=(Linq &&rh)
+    Linq<T>& Linq<T>::operator=(Linq &&rh)
     {
         std::swap(range, rh.range);
         return *this;
@@ -2080,30 +2141,30 @@ namespace Linq{
     }
 
     template<typename T>
-    Linq<typename T> Linq<T>::concat(const Linq<typename T> &second)
+    Linq<T> Linq<T>::concat(const Linq<T> &second)
     {
-        Linq<typename T> result;
+        Linq<T> result;
         result.range = new Implemenatation::ConcatRange<T>(Implemenatation::CloneRange(range), Implemenatation::CloneRange(second.range));
         return result;
     }
 
     template<typename T>
-    Linq<typename T> Linq<T>::defaultIfEmpty(const T &defaultValue)
+    Linq<T> Linq<T>::defaultIfEmpty(const T &defaultValue)
     {
-        Linq<typename T> result;
+        Linq<T> result;
         result.range = new Implemenatation::DefaultIfEmptyRange<T>(Implemenatation::CloneRange(range), defaultValue);
         return result;
     }
 
     template<typename T>
-    Linq<typename T> Linq<T>::defaultIfEmpty()
+    Linq<T> Linq<T>::defaultIfEmpty()
     {
         return defaultIfEmpty(T());
     }
 
     template<typename T>
     template<typename F>
-    Linq<typename T> Linq<T>::distinct(F f)
+    Linq<T> Linq<T>::distinct(F f)
     {
         Linq<T> result;
         result.range = new Implemenatation::DistinctRange<T, F, decltype(f(MakeType<T>()))>(Implemenatation::CloneRange(range), f);
@@ -2111,7 +2172,7 @@ namespace Linq{
     }
 
     template<typename T>
-    Linq<typename T> Linq<T>::distinct()
+    Linq<T> Linq<T>::distinct()
     {
         return distinct([](const T &a) { return a; });
     }
@@ -2151,11 +2212,11 @@ namespace Linq{
     }
 
     template<typename T>
-    template<typename TComp>
-    Linq<typename T> Linq<T>::except(Linq<typename T> other, TComp comp)
+    template <typename U, typename TComp>
+    Linq<T> Linq<T>::except(Linq<U> other, TComp comp)
     {
-        Linq<typename T> result;
-        result.range = new Implemenatation::ExceptRange<T, TComp>(
+        Linq<T> result;
+        result.range = new Implemenatation::ExceptRange<T, U, TComp>(
             Implemenatation::CloneRange(range),
             Implemenatation::CloneRange(other.range),
             comp
@@ -2164,7 +2225,7 @@ namespace Linq{
     }
 
     template<typename T>
-    Linq<typename T> Linq<T>::except(Linq<typename T> other)
+    Linq<T> Linq<T>::except(Linq<T> other)
     {
         auto comp = [](const T &lh, const T &rh){ return lh == rh; };
         return except(other, comp);
@@ -2172,15 +2233,15 @@ namespace Linq{
 
     template<typename T>
     template<typename U>
-    Linq<typename T> Linq<T>::where(U f)
+    Linq<T> Linq<T>::where(U f)
     {
-        Linq<typename T> result;
+        Linq<T> result;
         result.range = new Implemenatation::WhereRange<T, U>(Implemenatation::CloneRange(range), f);
         return result;
     }
 
     template<typename T>
-    LinqOrd<typename T> Linq<T>::orderBy()
+    LinqOrd<T> Linq<T>::orderBy()
     {
         auto f = [](const T &a) { return a; };
         auto comp = [](const T &lh, const T &rh) { return lh < rh ;};
@@ -2189,7 +2250,7 @@ namespace Linq{
 
     template<typename T>
     template<typename U>
-    LinqOrd<typename T> Linq<T>::orderBy(U f)
+    LinqOrd<T> Linq<T>::orderBy(U f)
     {
         typedef decltype(f(MakeType<T>())) TKey;
         auto comp = [](const TKey &lh, const TKey &rh) { return lh < rh ;};
@@ -2198,15 +2259,15 @@ namespace Linq{
 
     template<typename T>
     template<typename U, typename Comp>
-    LinqOrd<typename T> Linq<T>::orderBy(U f, Comp comp)
+    LinqOrd<T> Linq<T>::orderBy(U f, Comp comp)
     {
-        LinqOrd<typename T> result;
+        LinqOrd<T> result;
         result.range = new Implemenatation::OrderByRange<T, U, Comp>(Implemenatation::CloneRange(range), f, comp, false);
         return result;
     }
 
     template<typename T>
-    LinqOrd<typename T> Linq<T>::orderByDesc()
+    LinqOrd<T> Linq<T>::orderByDesc()
     {
         auto f = [](const T &a) { return a; };
         auto comp = [](const T &lh, const T &rh) { return lh < rh ;};
@@ -2215,7 +2276,7 @@ namespace Linq{
 
     template<typename T>
     template<typename U>
-    LinqOrd<typename T> Linq<T>::orderByDesc(U f)
+    LinqOrd<T> Linq<T>::orderByDesc(U f)
     {
         typedef decltype(f(MakeType<T>())) TKey;
         auto comp = [](const TKey &lh, const TKey &rh) { return lh < rh; };
@@ -2224,10 +2285,10 @@ namespace Linq{
 
     template<typename T>
     template<typename U, typename Comp>
-    LinqOrd<typename T> Linq<T>::orderByDesc(U f, Comp comp)
+    LinqOrd<T> Linq<T>::orderByDesc(U f, Comp comp)
     {
         typedef decltype(f(MakeType<T>())) TKey;
-        LinqOrd<typename T> result;
+        LinqOrd<T> result;
         result.range = new Implemenatation::OrderByRange<T, U, decltype(comp)>(Implemenatation::CloneRange(range), f, comp, true);
         return result;
     }
@@ -2249,7 +2310,7 @@ namespace Linq{
         FLeftKey leftKey,
         FRightKey rightKey,
         FResult resultSelector
-        ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<T>()))>
+        ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>
     {
         typedef decltype(resultSelector(MakeType<T>(), MakeType<U>())) NewT;
         typedef decltype(leftKey(MakeType<T>())) TLeftKey;
@@ -2309,7 +2370,7 @@ namespace Linq{
         FResult resultSelector
         ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>
     {
-        typedef std::decay<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>::type NewT;
+        typedef typename std::decay<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>::type NewT;
         typedef decltype(leftKey(MakeType<T>())) TLeftKey;
         typedef decltype(rightKey(MakeType<U>())) TRightKey;
 
@@ -2347,7 +2408,7 @@ namespace Linq{
         U defaultValue
         ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>
     {
-        typedef std::decay<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>::type NewT;
+        typedef typename std::decay<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>::type NewT;
         typedef decltype(leftKey(MakeType<T>())) TLeftKey;
         typedef decltype(rightKey(MakeType<U>())) TRightKey;
 
@@ -2386,7 +2447,7 @@ namespace Linq{
         U defaultRValue
         ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>
     {
-        typedef std::decay<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>::type NewT;
+        typedef typename std::decay<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>::type NewT;
         typedef decltype(leftKey(MakeType<T>())) TLeftKey;
         typedef decltype(rightKey(MakeType<U>())) TRightKey;
 
@@ -2416,7 +2477,7 @@ namespace Linq{
     }
 
     template<typename T>
-    Linq<typename T> Linq<T>::skip(int n)
+    Linq<T> Linq<T>::skip(int n)
     {
         Linq<T> result;
         result.range = new Implemenatation::SkipRange<T>(Implemenatation::CloneRange(range), n);
@@ -2425,7 +2486,7 @@ namespace Linq{
 
     template<typename T>
     template<typename F>
-    Linq<typename T> Linq<T>::skipWhile(F f)
+    Linq<T> Linq<T>::skipWhile(F f)
     {
         Linq<T> result;
         result.range = new Implemenatation::SkipWhileRange<T, F>(Implemenatation::CloneRange(range), f);
@@ -2433,7 +2494,7 @@ namespace Linq{
     }
 
     template<typename T>
-    Linq<typename T> Linq<T>::take(unsigned int n)
+    Linq<T> Linq<T>::take(unsigned int n)
     {
         Linq<T> result;
         result.range = new Implemenatation::TakeRange<T>(Implemenatation::CloneRange(range), n);
@@ -2442,7 +2503,7 @@ namespace Linq{
 
     template<typename T>
     template<typename F>
-    Linq<typename T> Linq<T>::takeWhile(F f)
+    Linq<T> Linq<T>::takeWhile(F f)
     {
         Linq<T> result;
         result.range = new Implemenatation::TakeWhileRange<T, F>(Implemenatation::CloneRange(range), f);
@@ -2463,17 +2524,19 @@ namespace Linq{
     template<typename F, typename G>
     auto Linq<T>::groupBy(F f, G g) -> Linq<
         std::pair<
-        typename std::remove_const<decltype(f(MakeType<T>()))>::type,
-        std::vector<typename std::remove_const<decltype(g(MakeType<T>()))>::type>
+          typename std::remove_const<decltype(f(MakeType<T>()))>::type,
+          std::vector<typename std::remove_const<decltype(g(MakeType<T>()))>::type >
         >
     >
     {
         typedef typename std::remove_const<decltype(f(MakeType<T>()))>::type TKey;
         typedef typename std::remove_const<decltype(g(MakeType<T>()))>::type TValue;
-        typedef std::pair<TKey, std::vector<typename TValue> > NewT;
+        typedef	typename std::pair<TKey, std::vector<TValue> > NewT;
 
         Linq<NewT> result;
-        result.range = new Implemenatation::GroupByRange<NewT, T, F, G, TKey, TValue>(Implemenatation::CloneRange(range), f, g);
+        result.range = new Implemenatation::GroupByRange<NewT, T, F, G, TKey, TValue>(
+            Implemenatation::CloneRange(range), f, g
+            );
         return result;
     }
 
@@ -2490,9 +2553,9 @@ namespace Linq{
     }
 
     template<typename T>
-    Linq<typename T> Linq<T>::reverse()
+    Linq<T> Linq<T>::reverse()
     {
-        Linq<typename T> result;
+        Linq<T> result;
         if (auto prevReverse = dynamic_cast<Implemenatation::ReverseRange<T>*>(range))
         {
             result.range = Implemenatation::CloneRange(prevReverse->srcRange());
@@ -2591,6 +2654,13 @@ namespace Linq{
     }
 
     template<typename T>
+    bool Linq<T>::empty()
+    {
+        range->rewind();
+        return range->empty();
+    }
+    
+    template<typename T>
     template<typename F>
     T Linq<T>::elect(F f)
     {
@@ -2613,7 +2683,7 @@ namespace Linq{
     {
         return elect(
             []
-        (decltype(const_reference()) lh, decltype(const_reference()) rh)
+        (const T &lh, const T &rh)
         { return lh < rh; }
         );
     }
@@ -2623,9 +2693,26 @@ namespace Linq{
     {
         return elect(
             []
-        (decltype(const_reference()) lh, decltype(const_reference()) rh)
+        (const T &lh, const T &rh)
         { return lh > rh; }
         );
+    }
+
+    template<typename T>
+    std::pair<T, T> Linq<T>::minMax()
+    {
+        range->rewind();
+        if (range->empty())
+            throw new InvalidOperationException();
+        T minVal = range->popFront();
+        T maxVal = minVal;
+        while(!range->empty())
+        {
+            T candidate = range->popFront();
+            minVal = std::min(minVal, candidate);
+            maxVal = std::max(maxVal, candidate);
+        }
+        return std::pair<T, T>(minVal, maxVal);
     }
 
     template<typename T>
@@ -2647,7 +2734,7 @@ namespace Linq{
     template<typename F>
     auto Linq<T>::sum(F f) -> decltype(f(MakeType<T>()))
     {
-        typedef std::remove_const<decltype(f(MakeType<T>()))>::type TResult;
+        typedef typename std::remove_const<decltype(f(MakeType<T>()))>::type TResult;
         TResult result = TResult();
         if (range->empty())
             throw new InvalidOperationException();
@@ -2660,10 +2747,58 @@ namespace Linq{
     }
 
     template<typename T>
-    std::vector<typename T> Linq<T>::toVector()
+    T Linq<T>::avg()
+    {
+        CleanT result = T();
+        range->rewind();
+        if (range->empty())
+            throw new InvalidOperationException();
+
+        int count = 0;
+        while(!range->empty())
+        {
+            result = result + range->popFront();
+            ++count;
+        }
+        if (count == 0)
+            return 0;
+        return result / count;
+    }
+
+    template<typename T>
+    template<typename F>
+    auto Linq<T>::avg(F f) -> decltype(f(MakeType<T>()))
+    {
+        typedef typename std::remove_const<decltype(f(MakeType<T>()))>::type TResult;
+        TResult result = TResult();
+        if (range->empty())
+            throw new InvalidOperationException();
+
+        int count = 0;
+        while(!range->empty())
+        {
+            result = result + f(range->popFront());
+             ++count;
+        }
+
+        if (count == 0)
+            return 0;
+        return result / count;
+    }
+
+    template<typename T>
+    Linq<typename Linq<T>::CleanT> Linq<T>::removeConst()
+    {
+        Linq<CleanT> result;
+        result.range = new Implemenatation::RemoveConstRange<CleanT, T>(Implemenatation::CloneRange(range));
+        return result;
+    }
+
+    template<typename T>
+    std::vector<T> Linq<T>::toVector()
     {
         range->rewind();
-        std::vector<typename T> result;
+        std::vector<T> result;
         while(!range->empty())
         {
             result.push_back(range->popFront());
@@ -2672,10 +2807,10 @@ namespace Linq{
     }
 #ifdef QVECTOR_H
     template<typename T>
-    QVector<typename T> Linq<T>::toQVector()
+    QVector<T> Linq<T>::toQVector()
     {
         range->rewind();
-        QVector<typename T> result;
+        QVector<T> result;
         while(!range->empty())
         {
             result.push_back(range->popFront());
@@ -2685,10 +2820,10 @@ namespace Linq{
 #endif 
 
     template<typename T>
-    std::set<typename T> Linq<T>::toSet()
+    std::set<T> Linq<T>::toSet()
     {
         range->rewind();
-        std::set<typename T> result;
+        std::set<T> result;
         while(!range->empty())
         {
             result.insert(range->popFront());
@@ -2697,10 +2832,10 @@ namespace Linq{
     }
 
     template<typename T>
-    std::list<typename T> Linq<T>::toList()
+    std::list<T> Linq<T>::toList()
     {
         range->rewind();
-        std::list<typename T> result;
+        std::list<T> result;
         while(!range->empty())
         {
             result.push_back(range->popFront());
@@ -2723,6 +2858,8 @@ namespace Linq{
         return result;
     }
 
+
+
     //=============================================================================
     template<typename T>
     LinqOrd<T>::LinqOrd()
@@ -2731,35 +2868,35 @@ namespace Linq{
 
     template<typename T>
     LinqOrd<T>::LinqOrd(const LinqOrd &rh)
-        :Linq(rh)
+        :Linq<T>(rh)
     {
     }
 
     template<typename T>
     LinqOrd<T>::LinqOrd(LinqOrd &&rh)
-        :Linq(rh)
+        :Linq<T>(rh)
     {
     }
 
     template<typename T>
-    typename LinqOrd<T>& LinqOrd<T>::operator=(const LinqOrd &rh)
+    LinqOrd<T>& LinqOrd<T>::operator=(const LinqOrd &rh)
     {
-        Linq &lh = *this;
+        Linq<T> &lh = *this;
         lh = rh;
         return *this;
     }
 
     template<typename T>
-    typename LinqOrd<T>& LinqOrd<T>::operator=(LinqOrd<T> &&rh)
+    LinqOrd<T>& LinqOrd<T>::operator=(LinqOrd<T> && rh)
     {
-        Linq &lh = *this;
+        Linq<T> &lh = *this;
         lh = rh;
         return *this;
     }
     //-----------------------------------------------------------------------------
     template<typename T>
     template<typename U>
-    LinqOrd<typename T> LinqOrd<T>::thenBy(U f)
+    LinqOrd<T> LinqOrd<T>::thenBy(U f)
     {
         typedef decltype(f(MakeType<T>())) TKey;
         auto comp = [](const TKey &lh, const TKey &rh) { return lh < rh ;};
@@ -2768,10 +2905,10 @@ namespace Linq{
 
     template<typename T>
     template <typename U, typename Comp>
-    LinqOrd<typename T> LinqOrd<T>::thenBy(U f, Comp comp)
+    LinqOrd<T> LinqOrd<T>::thenBy(U f, Comp comp)
     {
-        LinqOrd<typename T> result;
-        auto orderBy = dynamic_cast<Implemenatation::BaseOrderByRange<T> *>(Implemenatation::CloneRange(range));
+        LinqOrd<T> result;
+        auto orderBy = dynamic_cast<Implemenatation::BaseOrderByRange<T> *>(Implemenatation::CloneRange(this->range));
         orderBy->addComparator(f, comp, false);
         result.range = orderBy;
         return result;
@@ -2779,10 +2916,10 @@ namespace Linq{
 
     template<typename T>
     template <typename U, typename Comp>
-    LinqOrd<typename T> LinqOrd<T>::thenByDesc(U f, Comp comp)
+    LinqOrd<T> LinqOrd<T>::thenByDesc(U f, Comp comp)
     {
-        LinqOrd<typename T> result;
-        auto orderBy = dynamic_cast<Implemenatation::BaseOrderByRange<T> *>(Implemenatation::CloneRange(range));
+        LinqOrd<T> result;
+        auto orderBy = dynamic_cast<Implemenatation::BaseOrderByRange<T> *>(Implemenatation::CloneRange(this->range));
         orderBy->addComparator(f, comp, true);
         result.range = orderBy;
         return result;
@@ -2790,7 +2927,7 @@ namespace Linq{
 
     template<typename T>
     template<typename U>
-    LinqOrd<typename T> LinqOrd<T>::thenByDesc(U f)
+    LinqOrd<T> LinqOrd<T>::thenByDesc(U f)
     {
         typedef decltype(f(MakeType<T>())) TKey;
         auto comp = [](const TKey &lh, const TKey &rh) { return lh < rh ;};
@@ -2801,50 +2938,58 @@ namespace Linq{
     template <typename TCont>
     auto from(TCont &src) -> Linq<typename std::remove_reference<decltype(*(src.begin()))>::type>
     {
-        typedef std::remove_reference<decltype(*(src.begin()))>::type T;
-        Linq<typename T> result;
-        result.range = new Implemenatation::ContainerRange<TCont, TCont::iterator, T>(src);
+        typedef typename std::remove_reference<decltype(*(src.begin()))>::type T;
+        Linq<T> result;
+        result.range = new Implemenatation::ContainerRange<TCont, typename TCont::iterator, T>(src);
         return result;
     }
 
     template <typename TCont>
     auto from(const TCont &src) -> Linq<typename std::remove_reference<decltype(*(src.begin()))>::type>
     {
-        typedef std::remove_reference<decltype(*(src.begin()))>::type T;
-        Linq<typename T> result;
-        result.range = new Implemenatation::ContainerRange<const TCont, TCont::const_iterator, T>(src);
+        typedef typename std::remove_reference<decltype(*(src.begin()))>::type T;
+        Linq<T> result;
+        result.range = new Implemenatation::ContainerRange<const TCont, typename TCont::const_iterator, T>(src);
         return result;
     }
 
     template <typename T, int size>
-    auto from(T (&data)[size]) -> Linq<typename T>
+    auto from(T (&data)[size]) -> Linq<T>
     {
-        Linq<typename T> result;
-        result.range = new Implemenatation::ArrayRange<typename T>(data, data + size);
+        Linq<T> result;
+        result.range = new Implemenatation::ArrayRange<T>(data, data + size);
+        return result;
+    }
+
+    template <typename T>
+    auto from(T *data, size_t size) -> Linq<T>
+    {
+        Linq<T> result;
+        result.range = new Implemenatation::ArrayRange<T>(data, data + size);
         return result;
     }
 
     template <typename TIter>
     auto from(TIter b, TIter e) -> Linq<typename std::iterator_traits<TIter>::value_type>
     {
-        typedef std::iterator_traits<TIter>::value_type T;
-        Linq<typename T> result;
+        typedef typename std::iterator_traits<TIter>::value_type T;
+        Linq<T> result;
         result.range = new Implemenatation::IteratorRange<TIter>(b, e);
         return result;
     }
 
     template <typename T>
-    Linq<typename T> repeat(T value, unsigned int count)
+    Linq<T> repeat(T value, unsigned int count)
     {
-        Linq<typename T> result;
+        Linq<T> result;
         result.range = new Implemenatation::RepeatRange<T>(value, count);
         return result;
     }
 
     template <typename T>
-    Linq<typename T> empty()
+    Linq<T> empty()
     {
-        Linq<typename T> result;
+        Linq<T> result;
         result.range = new Implemenatation::EmptyRange<T>();
         return result;
     }
