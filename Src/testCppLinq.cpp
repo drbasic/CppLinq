@@ -469,21 +469,22 @@ void TestLinq::join()
         )
         .toVector();
 
-    auto result2 = src1
-        .join(
-            src2,
-            [](decltype(src1.const_reference()) a){ return a.iVal; },
-            [](decltype(src2.const_reference()) b){ return b.iVal2; },
-            []
-            (decltype(src1.const_reference()) a, decltype(src2.const_reference()) b)
-            { 
-                return std::make_pair(b.dVal, a.sVal); 
-            },
-            []
-            (int a, int b)
-            { 
-                return a != b; 
-            }
+    
+    std::vector<int> dataA;
+    std::vector<int> dataB;
+    const int N = 100000;
+    for(int i = 0; i < N; ++i)
+    {
+        dataA.push_back(std::rand());
+        dataB.push_back(std::rand());
+    }
+    auto srcA = Linq::from(dataA);
+    auto srcB = Linq::from(dataB);
+    auto resultSlow = srcA.join(
+        srcB,
+        [](decltype(srcA.const_reference()) a){ return a; },
+        [](decltype(srcB.const_reference()) b){ return b; },
+        [](decltype(srcA.const_reference()) a, decltype(srcB.const_reference()) b){ return std::make_pair(a, b); }
         )
         .toVector();
 }
