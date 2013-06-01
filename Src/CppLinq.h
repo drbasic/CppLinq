@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <functional>
 #include <type_traits>
-//int Count = 0;
+int RangeCount = 0;
 
 namespace Linq{
     class InvalidOperationException{};
@@ -25,8 +25,8 @@ namespace Linq{
     class Range
     {
     public:
-        Range(){}//{ Count++; }
-        virtual ~Range(){}// {Count --;}
+        Range(){ RangeCount++; }
+        virtual ~Range() { RangeCount--; }
         virtual bool empty() = 0;
         virtual T& popFront() = 0;
         virtual T& front() = 0;
@@ -187,19 +187,19 @@ namespace Linq{
         template<typename F>
         auto selectMany(F f) -> Linq< decltype(f(MakeType<T>()).value()) >;
 
-        template<typename F, typename G>
-        auto groupBy(F f, G g) -> Linq<
+        template<typename FKey, typename FValue>
+        auto groupBy(FKey keySelector, FValue valueSelector) -> Linq<
             std::pair<
-               typename std::remove_const<decltype(f(MakeType<T>()))>::type,
-               std::vector<typename std::remove_const<decltype(g(MakeType<T>()))>::type>
+               typename std::remove_const<decltype(keySelector(MakeType<T>()))>::type,
+               std::vector<typename std::remove_const<decltype(valueSelector(MakeType<T>()))>::type>
             >
         >;
 
-        template<typename F>
-        auto groupBy(F f) -> Linq<
+        template<typename FKey>
+        auto groupBy(FKey keySelector) -> Linq<
             std::pair<
-            typename std::remove_const<decltype(f(MakeType<T>()))>::type,
-            std::vector<T>
+                typename std::remove_const<decltype(keySelector(MakeType<T>()))>::type,
+                std::vector<T>
             >
         >;
 
@@ -278,18 +278,6 @@ namespace Linq{
     //=============================================================================
 
     namespace Implemenatation {
-        
-        template <class T>
-        struct supports_less_than
-        {
-            template <class U>
-            static auto less_than_test(const U* u) -> decltype(*u < *u, char(0))
-            { }
-
-            static std::array<char, 2> less_than_test(...) { }
-
-            static const bool value = (sizeof(less_than_test((T*)0)) == 1);
-        };
         
         template<typename T>
         Range<T>* CloneRange(Range<T> *src)
@@ -916,9 +904,9 @@ namespace Linq{
             Comp comp_;
             bool isDesc_;
             bool prepared_;
-            typename std::vector< T*> orderedData_;
-            typename std::vector< T*>::iterator iter_;
-            typename std::vector< T*>::iterator end_;
+            typename std::vector<T*> orderedData_;
+            typename std::vector<T*>::iterator iter_;
+            typename std::vector<T*>::iterator end_;
 
             void prepare()
             {
@@ -1788,7 +1776,6 @@ namespace Linq{
             DistinctRange(Range<T> *src, F f)
                 : src_(src)
                 , f_(f)
-                , prepared_(false)
             {
             }
 
@@ -1799,27 +1786,29 @@ namespace Linq{
 
             bool empty() override
             {
-                if (!prepared_)
-                    prepare();
-                return iter_ == end_;
+                return src_->empty();
             }
 
             T& popFront() override
             {
-                T &result = *iter_->second;
-                iter_++;
+                T& result = front();
+                for(src_->popFront();!src_->empty();src_->popFront())
+                {
+                    T& next = src_->front();
+                    if (f_(result) != f_(next))
+                        break;
+                }
                 return result;
             }
 
             T& front() override
             {
-                return *iter_->second;
+                return src_->front();
             }
 
             void rewind() override
             {
                 src_->rewind();
-                prepared_ = false;
             }
 
             Range<T>* clone() override
@@ -1832,32 +1821,16 @@ namespace Linq{
             }
         private:
             Range<T> *src_;
-            bool prepared_;
             F f_;
-            std::map<TKey, T*> data_;
-            typename std::map<TKey, T*>::iterator iter_;
-            typename std::map<TKey, T*>::iterator end_;
-
-            void prepare()
-            {
-                prepared_ = true;
-                while(!src_->empty())
-                {
-                    T &val = src_->popFront();
-                    TKey key = f_(val);
-                    if (data_.find(key) == data_.end())
-                        data_.insert(std::pair<TKey, T*>(key, &val));
-                }
-                iter_ = data_.begin();
-                end_ = data_.end();
-            }
         };
 
-        template<typename T, typename TSrc, typename F, typename G, typename TKey, typename TValue>
-        class GroupByRange : public Range<T>
+        template<typename TSrc, typename FKey, typename FValue, typename TKey, typename TValue>
+        class GroupByRange : public Range< std::pair<TKey, std::vector<TValue> > >
         {
         public:
-            GroupByRange(Range<TSrc> *src, F f, G g)
+            typedef std::pair<TKey, std::vector<TValue> > T;
+
+            GroupByRange(Range<TSrc> *src, FKey f, FValue g)
                 : src_(src)
                 , f_(f)
                 , g_(g)
@@ -1895,7 +1868,7 @@ namespace Linq{
 
             Range<T>* clone() override
             {
-                auto result = new GroupByRange<T, TSrc, F, G, TKey, TValue>(
+                auto result = new GroupByRange<TSrc, FKey, FValue, TKey, TValue>(
                     CloneRange(src_),
                     f_,
                     g_
@@ -1905,8 +1878,8 @@ namespace Linq{
         private:
             Range<TSrc> *src_;
             bool prepared_;
-            F f_;
-            G g_;
+            FKey f_;
+            FValue g_;
             typedef std::vector<T> TData;
             TData data_;
             typename TData::iterator iter_;
@@ -2237,8 +2210,8 @@ namespace Linq{
     template<typename F>
     Linq<T> Linq<T>::distinct(F f)
     {
-        Linq<T> result;
-        result.range = new Implemenatation::DistinctRange<T, F, decltype(f(MakeType<T>()))>(Implemenatation::CloneRange(range), f);
+        Linq<T> result = orderBy(f);
+        result.range = new Implemenatation::DistinctRange<T, F, decltype(f(MakeType<T>()))>(result.range, f);
         return result;
     }
 
@@ -2591,31 +2564,30 @@ namespace Linq{
     }
 
     template<typename T>
-    template<typename F, typename G>
-    auto Linq<T>::groupBy(F f, G g) -> Linq<
+    template<typename FKey, typename FValue>
+    auto Linq<T>::groupBy(FKey keySelector, FValue valueSelector) -> Linq<
         std::pair<
-          typename std::remove_const<decltype(f(MakeType<T>()))>::type,
-          std::vector<typename std::remove_const<decltype(g(MakeType<T>()))>::type >
+            typename std::remove_const<decltype(keySelector(MakeType<T>()))>::type,
+            std::vector<typename std::remove_const<decltype(valueSelector(MakeType<T>()))>::type>
         >
     >
     {
-        typedef typename std::remove_const<decltype(f(MakeType<T>()))>::type TKey;
-        typedef typename std::remove_const<decltype(g(MakeType<T>()))>::type TValue;
-        typedef	typename std::pair<TKey, std::vector<TValue> > NewT;
+        typedef typename std::remove_const<decltype(keySelector(MakeType<T>()))>::type TKey;
+        typedef typename std::remove_const<decltype(valueSelector(MakeType<T>()))>::type TValue;
+        typedef Implemenatation::GroupByRange<T, FKey, FValue, TKey, TValue> RangeType;
 
-        Linq<NewT> result;
-        result.range = new Implemenatation::GroupByRange<NewT, T, F, G, TKey, TValue>(
-            Implemenatation::CloneRange(range), f, g
-            );
+        Linq<RangeType::T> result;
+        result.range = new RangeType(Implemenatation::CloneRange(range), keySelector, valueSelector);
+
         return result;
     }
 
     template<typename T>
-    template<typename F>
-    auto Linq<T>::groupBy(F f) -> Linq<
+    template<typename FKey>
+    auto Linq<T>::groupBy(FKey keySelector) -> Linq<
         std::pair<
-        typename std::remove_const<decltype(f(MakeType<T>()))>::type,
-        std::vector<T>
+            typename std::remove_const<decltype(keySelector(MakeType<T>()))>::type,
+            std::vector<T>
         >
     >
     {
