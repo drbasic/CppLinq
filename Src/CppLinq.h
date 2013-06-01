@@ -1335,6 +1335,22 @@ namespace Linq{
                 return result;
             }
         protected:
+            
+            template <typename A, typename B>
+            bool isEqual(A a, B b)
+            {
+                return !lessComp_(a->first, b->first)
+                    && !lessComp_(b->first, a->first);
+            }
+
+            template <typename A, typename B>
+            void cartesian(A li, A lie, B ri, B rie)
+            {
+                for(auto ii = li; ii != lie; ++ii)
+                    for(auto jj = ri; jj != rie; ++jj)
+                        this->data_.push_back(selectResult_(*ii->second, *jj->second));
+            }
+
             void prepare() override
             {
                 this->prepared_ = true;
@@ -1386,9 +1402,18 @@ namespace Linq{
                     bool rightLessLeft = lessComp_(ri->first, li->first);
                     if (!leftLessRight && !rightLessLeft)
                     {
-                        this->data_.push_back(selectResult_(*li->second, *ri->second));
-                        ++li;
-                        ++ri;
+                        auto lie = li + 1;
+                        while(lie != le && isEqual(li, lie))
+                            ++lie;
+
+                        auto rie = ri + 1;
+                        while(rie != re && isEqual(ri, rie))
+                            ++rie;
+                        
+                        cartesian(li, lie, ri, rie);
+                        li = lie;
+                        ri = rie;
+                        continue;
                     }
                     else if (leftLessRight)
                     {

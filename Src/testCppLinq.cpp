@@ -209,7 +209,7 @@ void TestLinq::groupBy()
             )
         .toVector();
 
-    if (t1.size() != 10)
+    if (t1.size() != 4)
         throw new InvalidResult();
 }
 
@@ -490,21 +490,38 @@ void TestLinq::join()
     
     std::vector<int> dataA;
     std::vector<int> dataB;
+    dataA.push_back(0);
+    dataA.push_back(1);
+    dataA.push_back(1);
+    dataB.push_back(0);
+    dataB.push_back(1);
+    dataB.push_back(1);
+    dataB.push_back(2);
+
+    
+    auto srcA = Linq::from(dataA);
+    auto srcB = Linq::from(dataB);
+    auto resultSrc = srcA.join(
+        srcB,
+        [](decltype(srcA.const_reference()) a){ return a; },
+        [](decltype(srcB.const_reference()) b){ return b; },
+        [](decltype(srcA.const_reference()) a, decltype(srcB.const_reference()) b){ return std::make_pair(a, b); }
+        );
+    auto result1 = resultSrc
+        .toVector();
+    if (result1.size() != 5)
+        throw new InvalidResult();
+
     const int N = 100000;
     for(int i = 0; i < N; ++i)
     {
         dataA.push_back(std::rand());
         dataB.push_back(std::rand());
     }
-    auto srcA = Linq::from(dataA);
-    auto srcB = Linq::from(dataB);
-    auto resultSlow = srcA.join(
-        srcB,
-        [](decltype(srcA.const_reference()) a){ return a; },
-        [](decltype(srcB.const_reference()) b){ return b; },
-        [](decltype(srcA.const_reference()) a, decltype(srcB.const_reference()) b){ return std::make_pair(a, b); }
-        )
+
+    auto result2 = resultSrc
         .toVector();
+    
 }
 
 void TestLinq::leftJoin()
