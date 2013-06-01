@@ -52,6 +52,7 @@ public:
     void contains();
     void count();
     void concat();
+    void groupBy();
     void defaultIfEmpty();
     void distinct();
     void elementAt();
@@ -87,6 +88,7 @@ void TestLinq::runMain()
     contains();
     count();
     concat();
+    groupBy();
     defaultIfEmpty();
     distinct();
     elementAt();
@@ -193,6 +195,21 @@ void TestLinq::concat()
     auto t1 = Linq::from(src1).concat(Linq::from(src2)).count() == 20;
 
     if (!t1)
+        throw new InvalidResult();
+}
+
+void TestLinq::groupBy()
+{
+    auto src1 = testData1();
+    
+    auto t1 = Linq::from(src1)
+        .groupBy(
+            [](const TestClass1 &a){return a.sVal; },
+            [](const TestClass1 &a){return a.iVal; }
+            )
+        .toVector();
+
+    if (t1.size() != 10)
         throw new InvalidResult();
 }
 
