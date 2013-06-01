@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <array>
 #include <vector>
 #include <map>
 #include <set>
@@ -128,13 +129,13 @@ namespace Linq{
             FResult resultSelector
             ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>;
 
-        template<typename U, typename FLeftKey, typename FRightKey, typename FResult, typename FKeyComp>
+        template<typename U, typename FLeftKey, typename FRightKey, typename FResult, typename FLessComp>
         auto join(
             Linq<U> other,
             FLeftKey leftKey,
             FRightKey rightKey,
             FResult resultSelector,
-            FKeyComp keyComp
+            FLessComp lessComp
             ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>;
 
         template<typename U, typename FLeftKey, typename FRightKey, typename FResult>
@@ -145,12 +146,31 @@ namespace Linq{
             FResult resultSelector
             ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>;
 
-        template<typename U, typename FLeftKey, typename FRightKey, typename FResult>
+        template<typename U, typename FLeftKey, typename FRightKey, typename FResult, typename FKeyComp>
         auto leftJoin(
             Linq<U> other,
             FLeftKey leftKey,
             FRightKey rightKey,
             FResult resultSelector,
+            FKeyComp keyComp
+            ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>;
+
+        template<typename U, typename FLeftKey, typename FRightKey, typename FResult>
+        auto leftJoinWithDefault(
+            Linq<U> other,
+            FLeftKey leftKey,
+            FRightKey rightKey,
+            FResult resultSelector,
+            U defaultValue
+            ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>;
+
+        template<typename U, typename FLeftKey, typename FRightKey, typename FResult, typename FKeyComp>
+        auto leftJoinWithDefault(
+            Linq<U> other,
+            FLeftKey leftKey,
+            FRightKey rightKey,
+            FResult resultSelector,
+            FKeyComp keyComp,
             U defaultValue
             ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>;
 
@@ -258,6 +278,19 @@ namespace Linq{
     //=============================================================================
 
     namespace Implemenatation {
+        
+        template <class T>
+        struct supports_less_than
+        {
+            template <class U>
+            static auto less_than_test(const U* u) -> decltype(*u < *u, char(0))
+            { }
+
+            static std::array<char, 2> less_than_test(...) { }
+
+            static const bool value = (sizeof(less_than_test((T*)0)) == 1);
+        };
+        
         template<typename T>
         Range<T>* CloneRange(Range<T> *src)
         {
@@ -895,7 +928,7 @@ namespace Linq{
                 if (this->comparators.size() == 1)
                 {
                     
-		    if (!isDesc_)
+                if (!isDesc_)
                         std::sort(
                         orderedData_.begin(),
                         orderedData_.end(),
@@ -1288,61 +1321,99 @@ namespace Linq{
             virtual void prepare() = 0;
         };
 
-        template<typename LT, typename RT, typename FLeftKey, typename FRightKey, typename FResult, typename TResult, typename FKeyComp>
+        template<typename LT, typename RT, typename FLeftKey, typename FRightKey, typename FResult, typename TResult, typename FLessComp>
         class JoinRange : public BaseInnerJoinRange<LT, RT, TResult>
         {
         public:
-            JoinRange(Range<LT> *srcL, Range<RT> *srcR, FLeftKey leftKey, FRightKey rightKey, FResult selectResult, FKeyComp keyComp)
+            JoinRange(Range<LT> *srcL, Range<RT> *srcR, FLeftKey leftKey, FRightKey rightKey, FResult selectResult, FLessComp lessComp)
                 : BaseInnerJoinRange<LT, RT, TResult>(srcL, srcR)
                 , leftKey_(leftKey)
                 , rightKey_(rightKey)
                 , selectResult_(selectResult)
-                , keyComp_(keyComp)
+                , lessComp_(lessComp)
             {
             }
 
             Range<TResult>* clone() override
             {
-                auto result = new JoinRange<LT, RT, FLeftKey, FRightKey, FResult, TResult, FKeyComp>(
+                auto result = new JoinRange<LT, RT, FLeftKey, FRightKey, FResult, TResult, FLessComp>(
                     CloneRange(this->srcL_),
                     CloneRange(this->srcR_),
                     leftKey_,
                     rightKey_,
                     selectResult_,
-                    keyComp_
+                    lessComp_
                     );
                 return result;
             }
         protected:
-            void prepare()
+            void prepare() override
             {
                 this->prepared_ = true;
                 if (this->srcL_->empty() || this->srcR_->empty())
                     return;
 
+                typedef decltype(leftKey_(MakeType<LT>())) LeftKey;
+                typedef decltype(rightKey_(MakeType<RT>())) RightKey;
+                //подготавливаем список ключ-значение из левого списка
+                typedef std::pair<LeftKey, LT*> LeftKeyValue;
+                std::vector<LeftKeyValue> lhData;
+                while(!this->srcL_->empty())
+                {
+                    auto pVal = &this->srcL_->popFront();
+                    lhData.push_back(LeftKeyValue(leftKey_(*pVal), pVal));
+                }
+                std::sort(
+                    lhData.begin(), 
+                    lhData.end(), 
+                    [=]
+                    (const LeftKeyValue& a, const LeftKeyValue& b)
+                    { return lessComp_(a.first, b.first);}
+                    );
+
                 //подготавливаем список ключ-значение из правого списка
-                typedef std::pair<decltype(rightKey_(MakeType<RT>())), RT*> KeyValue;
-                std::vector<KeyValue> rhData;
+                typedef std::pair<RightKey, RT*> RightKeyValue;
+                std::vector<RightKeyValue> rhData;
                 while(!this->srcR_->empty())
                 {
                     auto pVal = &this->srcR_->popFront();
-                    rhData.push_back(KeyValue(rightKey_(*pVal), pVal));
+                    rhData.push_back(RightKeyValue(rightKey_(*pVal), pVal));
                 }
+                std::sort(
+                    rhData.begin(), 
+                    rhData.end(), 
+                    [=]
+                    (const RightKeyValue& a, const RightKeyValue& b)
+                    { return lessComp_(a.first, b.first);}
+                    );
 
-                //двигаемся по левому списку
-                while(!this->srcL_->empty())
+                //проходим по спискам и выбираем эквивалентные значения
+                auto li = lhData.begin();
+                auto le = lhData.end();
+                auto ri = rhData.begin();
+                auto re = rhData.end();
+                while(li != le && ri != re)
                 {
-                    //вычилсяем значение
-                    LT *lh = &this->srcL_->popFront();
-                    //и ключ
-                    auto lhKey = leftKey_(*lh);
-
-                    //теперь ищем в правом списке такие же ключи
-                    for(auto ii = rhData.begin() ; ii != rhData.end(); ++ii)
+                    bool leftLessRight = lessComp_(li->first, ri->first);
+                    bool rightLessLeft = lessComp_(ri->first, li->first);
+                    if (!leftLessRight && !rightLessLeft)
                     {
-                        //сравниваем ключи на эквивалентность
-                        if (keyComp_(lhKey, ii->first))
-                            this->data_.push_back(selectResult_(*lh, *(ii->second)));
+                        this->data_.push_back(selectResult_(*li->second, *ri->second));
+                        ++li;
+                        ++ri;
+                    }
+                    else if (leftLessRight)
+                    {
+                        ++li;
+                    }
+                    else if (rightLessLeft)
+                    {
+                        ++ri;
+                    }
+                    else
+                    {
+                        ++li;
+                        ++ri;
                     }
                 }
                 this->iter_ = this->data_.begin();
@@ -1351,7 +1422,7 @@ namespace Linq{
             FLeftKey leftKey_;
             FRightKey rightKey_;
             FResult selectResult_;
-            FKeyComp keyComp_;
+            FLessComp lessComp_;
         };
 
         template<typename LT, typename RT, typename FLeftKey, typename FRightKey, typename FResult, typename TResult, typename FKeyComp>
@@ -2312,51 +2383,39 @@ namespace Linq{
         FResult resultSelector
         ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>
     {
-        typedef decltype(resultSelector(MakeType<T>(), MakeType<U>())) NewT;
         typedef decltype(leftKey(MakeType<T>())) TLeftKey;
         typedef decltype(rightKey(MakeType<U>())) TRightKey;
 
-        auto keyComp =
+        auto lessComp =
             []
-        (const TLeftKey &lh, const TRightKey &rh) -> bool
-        {
-            return lh == rh;
-        };
+            (const TLeftKey &lh, const TRightKey &rh) -> bool
+            {
+                return lh < rh;
+            };
 
-        typedef decltype(keyComp) FKeyComp;
-
-        Linq<NewT> result;
-        result.range = new Implemenatation::JoinRange<T, U, FLeftKey, FRightKey, FResult, NewT, FKeyComp>(
-            Implemenatation::CloneRange(range),
-            Implemenatation::CloneRange(other.range),
-            leftKey,
-            rightKey,
-            resultSelector,
-            keyComp
-            );
-        return result;
+        return join(other, leftKey, rightKey, resultSelector, lessComp);
     }
 
     template<typename T>
-    template<typename U, typename FLeftKey, typename FRightKey, typename FResult, typename FKeyComp>
+    template<typename U, typename FLeftKey, typename FRightKey, typename FResult, typename FLessComp>
     auto Linq<T>::join(
         Linq<U> other,
         FLeftKey leftKey,
         FRightKey rightKey,
         FResult resultSelector,
-        FKeyComp keyComp
+        FLessComp lessComp
         ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>
     {
         typedef decltype(resultSelector(MakeType<T>(), MakeType<U>())) NewT;
 
         Linq<NewT> result;
-        result.range = new Implemenatation::JoinRange<T, U, FLeftKey, FRightKey, FResult, NewT, FKeyComp>(
+        result.range = new Implemenatation::JoinRange<T, U, FLeftKey, FRightKey, FResult, NewT, FLessComp>(
             Implemenatation::CloneRange(range),
             Implemenatation::CloneRange(other.range),
             leftKey,
             rightKey,
             resultSelector,
-            keyComp
+            lessComp
             );
         return result;
     }
@@ -2370,37 +2429,35 @@ namespace Linq{
         FResult resultSelector
         ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>
     {
-        typedef typename std::decay<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>::type NewT;
         typedef decltype(leftKey(MakeType<T>())) TLeftKey;
         typedef decltype(rightKey(MakeType<U>())) TRightKey;
 
         auto keyComp =
             []
-        (const TLeftKey &lh, const TRightKey &rh) -> bool
-        {
-            return lh == rh;
-        };
+            (const TLeftKey &lh, const TRightKey &rh) -> bool
+            {
+                return lh == rh;
+            };
 
-        typedef decltype(keyComp) FKeyComp;
+        return leftJoin(other, leftKey, rightKey, resultSelector, keyComp);
+    }
 
-        Linq<NewT> result;
-
-        result.range = new Implemenatation::LeftJoinRange<T, U, FLeftKey, FRightKey, FResult, NewT, FKeyComp>(
-            Implemenatation::CloneRange(range),
-            Implemenatation::CloneRange(other.range),
-            leftKey,
-            rightKey,
-            resultSelector,
-            keyComp,
-            U()
-            );
-
-        return result;
+    template<typename T>
+    template<typename U, typename FLeftKey, typename FRightKey, typename FResult, typename FKeyComp>
+    auto Linq<T>::leftJoin(
+        Linq<U> other,
+        FLeftKey leftKey,
+        FRightKey rightKey,
+        FResult resultSelector,
+        FKeyComp keyComp
+        ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>
+    {
+        return leftJoinWithDefault(other, leftKey, rightKey, resultSelector, keyComp, U());
     }
 
     template<typename T>
     template<typename U, typename FLeftKey, typename FRightKey, typename FResult>
-    auto Linq<T>::leftJoin(
+    auto Linq<T>::leftJoinWithDefault(
         Linq<U> other,
         FLeftKey leftKey,
         FRightKey rightKey,
@@ -2408,18 +2465,31 @@ namespace Linq{
         U defaultValue
         ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>
     {
-        typedef typename std::decay<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>::type NewT;
         typedef decltype(leftKey(MakeType<T>())) TLeftKey;
         typedef decltype(rightKey(MakeType<U>())) TRightKey;
 
         auto keyComp =
             []
-        (const TLeftKey &lh, const TRightKey &rh) -> bool
-        {
-            return lh == rh;
-        };
+            (const TLeftKey &lh, const TRightKey &rh) -> bool
+            {
+                return lh == rh;
+            };
 
-        typedef decltype(keyComp) FKeyComp;
+        return leftJoinWithDefault(other, leftKey, rightKey, resultSelector, keyComp, defaultValue);
+    }
+
+    template<typename T>
+    template<typename U, typename FLeftKey, typename FRightKey, typename FResult, typename FKeyComp>
+    auto Linq<T>::leftJoinWithDefault(
+        Linq<U> other,
+        FLeftKey leftKey,
+        FRightKey rightKey,
+        FResult resultSelector,
+        FKeyComp keyComp,
+        U defaultValue
+        ) -> Linq<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>
+    {
+        typedef typename std::decay<decltype(resultSelector(MakeType<T>(), MakeType<U>()))>::type NewT;
 
         Linq<NewT> result;
 
