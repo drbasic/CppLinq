@@ -108,6 +108,7 @@ void TestLinq::runMain()
     leftJoin();
 
     containers();
+    std::cout << RangeCount;
 }
 
 void TestLinq::aggregate()

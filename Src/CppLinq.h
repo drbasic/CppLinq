@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <functional>
 #include <type_traits>
-//int Count = 0;
+int RangeCount = 0;
 
 namespace Linq{
     class InvalidOperationException{};
@@ -25,8 +25,8 @@ namespace Linq{
     class Range
     {
     public:
-        Range(){}//{ Count++; }
-        virtual ~Range(){}// {Count --;}
+        Range(){ RangeCount++; }
+        virtual ~Range() { RangeCount--; }
         virtual bool empty() = 0;
         virtual T& popFront() = 0;
         virtual T& front() = 0;
@@ -278,18 +278,6 @@ namespace Linq{
     //=============================================================================
 
     namespace Implemenatation {
-        
-        template <class T>
-        struct supports_less_than
-        {
-            template <class U>
-            static auto less_than_test(const U* u) -> decltype(*u < *u, char(0))
-            { }
-
-            static std::array<char, 2> less_than_test(...) { }
-
-            static const bool value = (sizeof(less_than_test((T*)0)) == 1);
-        };
         
         template<typename T>
         Range<T>* CloneRange(Range<T> *src)
@@ -1788,7 +1776,6 @@ namespace Linq{
             DistinctRange(Range<T> *src, F f)
                 : src_(src)
                 , f_(f)
-                , prepared_(false)
             {
             }
 
@@ -1799,27 +1786,29 @@ namespace Linq{
 
             bool empty() override
             {
-                if (!prepared_)
-                    prepare();
-                return iter_ == end_;
+                return src_->empty();
             }
 
             T& popFront() override
             {
-                T &result = *iter_->second;
-                iter_++;
+                T& result = front();
+                for(src_->popFront();!src_->empty();src_->popFront())
+                {
+                    T& next = src_->front();
+                    if (f_(result) != f_(next))
+                        break;
+                }
                 return result;
             }
 
             T& front() override
             {
-                return *iter_->second;
+                return src_->front();
             }
 
             void rewind() override
             {
                 src_->rewind();
-                prepared_ = false;
             }
 
             Range<T>* clone() override
@@ -1832,25 +1821,7 @@ namespace Linq{
             }
         private:
             Range<T> *src_;
-            bool prepared_;
             F f_;
-            std::map<TKey, T*> data_;
-            typename std::map<TKey, T*>::iterator iter_;
-            typename std::map<TKey, T*>::iterator end_;
-
-            void prepare()
-            {
-                prepared_ = true;
-                while(!src_->empty())
-                {
-                    T &val = src_->popFront();
-                    TKey key = f_(val);
-                    if (data_.find(key) == data_.end())
-                        data_.insert(std::pair<TKey, T*>(key, &val));
-                }
-                iter_ = data_.begin();
-                end_ = data_.end();
-            }
         };
 
         template<typename T, typename TSrc, typename F, typename G, typename TKey, typename TValue>
@@ -2237,8 +2208,8 @@ namespace Linq{
     template<typename F>
     Linq<T> Linq<T>::distinct(F f)
     {
-        Linq<T> result;
-        result.range = new Implemenatation::DistinctRange<T, F, decltype(f(MakeType<T>()))>(Implemenatation::CloneRange(range), f);
+        Linq<T> result = orderBy(f);
+        result.range = new Implemenatation::DistinctRange<T, F, decltype(f(MakeType<T>()))>(result.range, f);
         return result;
     }
 
