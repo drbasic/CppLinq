@@ -70,6 +70,7 @@ public:
     void sum();
     void constSource();
     void join();
+    void leftJoin();
 
     void containers();
 
@@ -104,6 +105,7 @@ void TestLinq::runMain()
     sum();
     constSource();
     join();
+    leftJoin();
 
     containers();
 }
@@ -464,6 +466,46 @@ void TestLinq::join()
             { 
                 return std::make_pair(b.dVal, a.sVal); 
             }
+        )
+        .toVector();
+
+    auto result2 = src1
+        .join(
+            src2,
+            [](decltype(src1.const_reference()) a){ return a.iVal; },
+            [](decltype(src2.const_reference()) b){ return b.iVal2; },
+            []
+            (decltype(src1.const_reference()) a, decltype(src2.const_reference()) b)
+            { 
+                return std::make_pair(b.dVal, a.sVal); 
+            },
+            []
+            (int a, int b)
+            { 
+                return a != b; 
+            }
+        )
+        .toVector();
+}
+
+void TestLinq::leftJoin()
+{
+    auto data1 = testData1();
+    auto data2 = testData2();
+    auto src1 = Linq::from(data1);
+    auto src2 = Linq::from(data2);
+
+    auto result = src1
+        .leftJoin(
+            src2,
+            [](decltype(src1.const_reference()) a){ return a.iVal; },
+            [](decltype(src2.const_reference()) b){ return b.iVal2; },
+            []
+            (decltype(src1.const_reference()) a, decltype(src2.const_reference()) b)
+            { 
+                return std::make_pair(a.dVal, b.dVal); 
+            }
+
         )
         .toVector();
 }
